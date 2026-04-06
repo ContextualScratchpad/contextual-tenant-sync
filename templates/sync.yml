@@ -14,4 +14,6 @@ jobs:
     with:
       tenant_id: ${{ vars.CTXL_TENANT_ID }}
       silo: ${{ vars.CTXL_SILO }}
-    secrets: inherit
+    secrets:
+      CTXL_CLIENT_ID: ${{ secrets.CTXL_CLIENT_ID }}
+      CTXL_CLIENT_SECRET: ${{ secrets.CTXL_CLIENT_SECRET }}

@@ -2,6 +2,13 @@ name: Contextual Snapshot Sync (Reusable)
 
 on:
   workflow_call:
+    secrets:
+      CTXL_CLIENT_ID:
+        required: true
+        description: "Client ID from the Contextual platform API key"
+      CTXL_CLIENT_SECRET:
+        required: true
+        description: "Client Secret from the Contextual platform API key"
     inputs:
       tenant_id:
         required: true
