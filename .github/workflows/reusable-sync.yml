@@ -1,0 +1,68 @@
+name: Contextual Snapshot Sync (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      tenant_id:
+        required: true
+        type: string
+        description: "Tenant ID (e.g. acme)"
+      silo:
+        required: false
+        type: string
+        default: "dev"
+        description: "Platform silo: dev or prod"
+      out:
+        required: false
+        type: string
+        default: "tenant-snapshot"
+        description: "Output directory relative to workspace root"
+      skip_examples:
+        required: false
+        type: boolean
+        default: false
+        description: "Skip fetching exemplar records for object types"
+
+jobs:
+  sync:
+    name: Export & commit snapshot
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ContextualScratchpad/contextual-tenant-sync/context-sync@v1
+
+      - uses: ContextualScratchpad/contextual-tenant-sync@v1
+        with:
+          client_id: ${{ secrets.CTXL_CLIENT_ID }}
+          client_secret: ${{ secrets.CTXL_CLIENT_SECRET }}
+          tenant_id: ${{ inputs.tenant_id }}
+          silo: ${{ inputs.silo }}
+          out: ${{ inputs.out }}
+          skip_examples: ${{ inputs.skip_examples }}
+
+      - name: Upload object type examples as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: object-type-examples
+          path: ${{ inputs.out }}/components/object-types/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Commit snapshot if changed
+        run: |
+          git config user.name  "snapshot-bot[bot]"
+          git config user.email "snapshot-bot[bot]@users.noreply.github.com"
+          git add ${{ inputs.out }}/ .rules CLAUDE.md
+          if git diff --cached --quiet; then
+            echo "No snapshot changes detected — nothing to commit."
+          else
+            git commit -m "chore(snapshot): sync $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git push
+          fi

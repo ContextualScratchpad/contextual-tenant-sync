@@ -1,0 +1,44 @@
+name: "Contextual Snapshot Export (TypeScript)"
+description: "Export a Contextual platform snapshot using OAuth2 client credentials — TypeScript edition, no CLI dependency."
+
+inputs:
+  client_id:
+    description: "Client ID from the Contextual platform API key settings"
+    required: true
+  client_secret:
+    description: "Client Secret from the Contextual platform API key settings"
+    required: true
+  tenant_id:
+    description: "Tenant ID (e.g. acme)"
+    required: true
+  silo:
+    description: "Platform silo: dev or prod"
+    required: false
+    default: "dev"
+  out:
+    description: "Output directory (relative to the workspace root)"
+    required: false
+    default: "tenant-snapshot"
+  skip_examples:
+    description: "Skip fetching exemplar records for object types (schema only). Set to true for faster syncs when examples are not needed."
+    required: false
+    default: "false"
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+    - name: Run snapshot export
+      env:
+        CTXL_CLIENT_ID: ${{ inputs.client_id }}
+        CTXL_CLIENT_SECRET: ${{ inputs.client_secret }}
+        CTXL_TENANT_ID: ${{ inputs.tenant_id }}
+        CTXL_SILO: ${{ inputs.silo }}
+      run: |
+        node "${{ github.action_path }}/export.js" \
+          --out "${{ inputs.out }}" \
+          --yes \
+          ${{ inputs.skip_examples == 'true' && '--skip-examples' || '' }}
+      shell: bash

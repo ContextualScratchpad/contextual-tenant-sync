@@ -1,0 +1,17 @@
+{
+  "name": "contextual-snapshot-export-action-ts",
+  "version": "1.0.0",
+  "description": "GitHub Action: CLI-free Contextual platform snapshot exporter (TypeScript)",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "build:check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

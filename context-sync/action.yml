@@ -1,0 +1,9 @@
+name: "Contextual Context File Sync"
+description: "Sync universal sections of .rules and CLAUDE.md from the action repo into the calling tenant repo."
+
+runs:
+  using: "composite"
+  steps:
+    - name: Sync .rules and CLAUDE.md
+      run: node "${{ github.action_path }}/../sync_context_files.js"
+      shell: bash
