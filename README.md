@@ -17,27 +17,28 @@ Every 30 minutes the action fetches all platform components (flows, connections,
 
 ```bash
 # 1. Create the repo from the template
-gh repo create ContextualScratchpad/snapshot-<tenant-id>--<silo> \
+#    Replace <your-org> with your GitHub org or personal account name
+gh repo create <your-org>/snapshot-<tenant-id>--<silo> \
   --private \
-  --template ContextualScratchpad/tenant-snapshot-template \
+  --template JamesStolp/tenant-snapshot-template \
   --description "Contextual platform snapshot — tenant: <tenant-id> (<silo>)"
 
 # 2. Set non-sensitive config as repository variables
 gh variable set CTXL_TENANT_ID --body "<tenant-id>" \
-  --repo ContextualScratchpad/snapshot-<tenant-id>--<silo>
+  --repo <your-org>/snapshot-<tenant-id>--<silo>
 gh variable set CTXL_SILO      --body "<silo>" \
-  --repo ContextualScratchpad/snapshot-<tenant-id>--<silo>
+  --repo <your-org>/snapshot-<tenant-id>--<silo>
 
 # 3. Set credentials as repository secrets
 #    (each command prompts for the value interactively)
-gh secret set CTXL_CLIENT_ID     --repo ContextualScratchpad/snapshot-<tenant-id>--<silo>
-gh secret set CTXL_CLIENT_SECRET --repo ContextualScratchpad/snapshot-<tenant-id>--<silo>
+gh secret set CTXL_CLIENT_ID     --repo <your-org>/snapshot-<tenant-id>--<silo>
+gh secret set CTXL_CLIENT_SECRET --repo <your-org>/snapshot-<tenant-id>--<silo>
 
 # 4. Trigger the first sync
-gh workflow run sync.yml --repo ContextualScratchpad/snapshot-<tenant-id>--<silo>
+gh workflow run sync.yml --repo <your-org>/snapshot-<tenant-id>--<silo>
 
 # 5. Clone locally once the run completes (~30 seconds)
-git clone https://github.com/ContextualScratchpad/snapshot-<tenant-id>--<silo>.git .
+git clone https://github.com/<your-org>/snapshot-<tenant-id>--<silo>.git .
 git pull
 ```
 
@@ -52,10 +53,10 @@ git checkout -b setup/tenant-context
 git add .rules CLAUDE.md
 git commit -m "context: add tenant context for <tenant-id>"
 git push origin setup/tenant-context
-# Open PR → merge
+# Open PR on GitHub → merge
 ```
 
-Replace the template README with a tenant-specific one. Use [`templates/snapshot-repo-README.md`](templates/snapshot-repo-README.md) as a starting point.
+Replace the template README with a tenant-specific one. See the [speedrun-snapshot README](https://github.com/JamesStolp/snapshot-speedrun--prod/blob/main/README.md) as a reference example.
 
 **Repo naming convention:** `snapshot-<tenant-id>--<silo>` — the double-dash separates the tenant ID from the silo unambiguously, even when tenant IDs contain words like `dev` or `prod`.
 
