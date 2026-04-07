@@ -2,7 +2,7 @@
 
 A GitHub Action and reusable workflow for syncing Contextual platform tenant state into a shared, versioned git repository — giving every team member consistent, always-current platform context for AI-assisted sessions.
 
-Every 30 minutes the action fetches all platform components (flows, connections, agents, object types), extracts function node code into individual `.js` / `.py` files, renders flow summaries as Markdown, and commits the result. A commit only appears when something actually changed.
+Every 30 minutes the action fetches all platform components (flows, connections, agents, object types), extracts node code into individual files (`.js` for function nodes, `.py` for python-function nodes, `.mustache` / `.txt` for template nodes), renders flow summaries as Markdown, and commits the result. A commit only appears when something actually changed.
 
 ---
 
@@ -11,7 +11,6 @@ Every 30 minutes the action fetches all platform components (flows, connections,
 ### Prerequisites
 
 - [`gh` CLI](https://cli.github.com/) installed and authenticated
-- Access to the `ContextualScratchpad` GitHub org
 - A Contextual platform API key (Client ID + Client Secret) for the tenant
 
 ### Steps
