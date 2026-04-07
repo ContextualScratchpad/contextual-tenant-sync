@@ -56,7 +56,7 @@ git push origin setup/tenant-context
 # Open PR on GitHub → merge
 ```
 
-Replace the template README with a tenant-specific one. See the [speedrun-snapshot README](https://github.com/JamesStolp/snapshot-speedrun--prod/blob/main/README.md) as a reference example.
+Replace the template README with a tenant-specific one.
 
 **Repo naming convention:** `snapshot-<tenant-id>--<silo>` — the double-dash separates the tenant ID from the silo unambiguously, even when tenant IDs contain words like `dev` or `prod`.
 
@@ -180,46 +180,23 @@ contextual-tenant-sync/
   rules.base.md / CLAUDE.base.md  ← universal AI context files, auto-synced to tenant repos
   ── Build ──────────────────────────────────────────────────────
   tsconfig.json / package.json    ← TypeScript config, devDeps only
-  .env.example                    ← for local testing
-  ── Templates ──────────────────────────────────────────────────
-  templates/
-    sync.yml                      ← tenant repo workflow (calls reusable-sync.yml)
-    .gitignore                    ← tenant repo gitignore
-    snapshot-repo-README.md       ← tenant repo README starting point
   ── Documentation ──────────────────────────────────────────────
   README.md                       ← this file
-  ARCHITECTURE.md                 ← full architectural reference
-  DECISIONS.md                    ← decision log with rationale
-  DIAGRAM.md                      ← architecture diagram (Mermaid)
   CHANGELOG.md                    ← version history
 ```
 
 ---
 
-## Building locally
+## Contributing
+
+Changes to this repo affect all tenant repos on their next sync run via the floating `@v1` tag. Always compile before pushing:
 
 ```bash
-npm install        # installs devDependencies: typescript + @types/node only
-npm run build      # compiles export.ts and sync_context_files.ts → .js
-npm run build:check  # type-check without emitting
+npm install   # first time only
+npm run build # compiles export.ts and sync_context_files.ts → .js
 ```
 
-The compiled `.js` files are committed alongside the TypeScript source so the action can run with bare `node` — no npm install step needed at runtime.
-
-### Testing a change locally
-
-If you need to verify a code change against a real tenant before pushing, run `export.js` directly with credentials exported in your shell:
-
-```bash
-export CTXL_CLIENT_ID=<your-client-id>
-export CTXL_CLIENT_SECRET=<your-client-secret>
-export CTXL_TENANT_ID=<tenant-id>
-export CTXL_SILO=prod
-
-node export.js --out ./test-snapshot
-```
-
-This is only relevant when developing the action itself. For tenant snapshot repos, credentials live in GitHub Actions secrets and variables — never in a local file.
+Commit both the `.ts` source and compiled `.js` output.
 
 ---
 
