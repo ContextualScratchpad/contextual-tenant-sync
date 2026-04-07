@@ -206,14 +206,20 @@ npm run build:check  # type-check without emitting
 
 The compiled `.js` files are committed alongside the TypeScript source so the action can run with bare `node` — no npm install step needed at runtime.
 
-### Testing locally
+### Testing a change locally
+
+If you need to verify a code change against a real tenant before pushing, run `export.js` directly with credentials exported in your shell:
 
 ```bash
-cp .env.example .env
-# fill in CTXL_CLIENT_ID, CTXL_CLIENT_SECRET, CTXL_TENANT_ID, CTXL_SILO
+export CTXL_CLIENT_ID=<your-client-id>
+export CTXL_CLIENT_SECRET=<your-client-secret>
+export CTXL_TENANT_ID=<tenant-id>
+export CTXL_SILO=prod
 
 node export.js --out ./test-snapshot
 ```
+
+This is only relevant when developing the action itself. For tenant snapshot repos, credentials live in GitHub Actions secrets and variables — never in a local file.
 
 ---
 
