@@ -20,7 +20,7 @@ Every 30 minutes the action fetches all platform components (flows, connections,
 #    Replace <your-org> with your GitHub org or personal account name
 gh repo create <your-org>/snapshot-<tenant-id>--<silo> \
   --private \
-  --template JamesStolp/tenant-snapshot-template \
+  --template ContextualScratchpad/contextual-tenant-snapshot-template \
   --description "Contextual platform snapshot — tenant: <tenant-id> (<silo>)"
 
 # 2. Set non-sensitive config as repository variables
