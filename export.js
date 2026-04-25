@@ -440,7 +440,6 @@ async function extractFlowCode(record, flowDir) {
         const tabLabel = safeFilename(tabNode['label'] ?? tabId);
         const tabDir = path.join(flowDir, tabLabel);
         const writtenInTab = new Set();
-        const stemCounts = new Map();
         for (const node of nodesByTab.get(tabId) ?? []) {
             const nodeType = node['type'] ?? '';
             const fieldDef = CODE_NODE_FIELDS[nodeType];
@@ -451,10 +450,8 @@ async function extractFlowCode(record, flowDir) {
             const code = (node[fieldName] ?? '').trim();
             if (!code)
                 continue;
-            const baseStem = safeFilename(displayName(node)) || 'unnamed';
-            const count = stemCounts.get(baseStem) ?? 0;
-            stemCounts.set(baseStem, count + 1);
-            const stem = count === 0 ? baseStem : `${baseStem}_${count + 1}`;
+            const nodeId = node['id'] ?? 'unknown';
+            const stem = `${safeFilename(displayName(node)) || 'unnamed'}_${nodeId}`;
             await fsp.mkdir(tabDir, { recursive: true });
             const outPath = path.join(tabDir, `${stem}${ext}`);
             await fsp.writeFile(outPath, code, 'utf-8');
