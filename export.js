@@ -76,6 +76,15 @@ const CODE_NODE_FIELDS = {
     'python-function': ['code', '.py'],
     'template': ['template', templateExt],
 };
+function containerLabel(c) {
+    return c.kind === 'tab'
+        ? (c.node['label'] ?? '')
+        : (c.node['name'] ?? '');
+}
+function containerDirName(c, fallbackId) {
+    const prefix = c.kind === 'tab' ? 'tab_' : 'subflow_';
+    return prefix + (safeFilename(containerLabel(c)) || fallbackId);
+}
 // ---------------------------------------------------------------------------
 // .env loader
 // ---------------------------------------------------------------------------
@@ -416,31 +425,33 @@ function displayName(node) {
 async function extractFlowCode(record, flowDir) {
     const nodeRedData = record['node_red_data'];
     const flowsList = nodeRedData?.['flows'] ?? [];
-    const tabs = new Map();
+    const containers = new Map();
     for (const n of flowsList) {
-        if (n['type'] === 'tab') {
+        const t = n['type'];
+        if (t === 'tab' || t === 'subflow') {
             const id = n['id'];
             if (typeof id === 'string')
-                tabs.set(id, n);
+                containers.set(id, { node: n, kind: t });
         }
     }
-    const nodesByTab = new Map();
+    const nodesByContainer = new Map();
     for (const node of flowsList) {
-        if (node['type'] === 'tab')
+        const t = node['type'];
+        if (t === 'tab' || t === 'subflow')
             continue;
         const z = node['z'];
-        if (typeof z === 'string' && tabs.has(z)) {
-            const list = nodesByTab.get(z) ?? [];
+        if (typeof z === 'string' && containers.has(z)) {
+            const list = nodesByContainer.get(z) ?? [];
             list.push(node);
-            nodesByTab.set(z, list);
+            nodesByContainer.set(z, list);
         }
     }
     const extracted = [];
-    for (const [tabId, tabNode] of tabs) {
-        const tabLabel = safeFilename(tabNode['label'] ?? tabId);
-        const tabDir = path.join(flowDir, tabLabel);
-        const writtenInTab = new Set();
-        for (const node of nodesByTab.get(tabId) ?? []) {
+    for (const [containerId, container] of containers) {
+        const dirName = containerDirName(container, containerId);
+        const containerDir = path.join(flowDir, dirName);
+        const writtenInContainer = new Set();
+        for (const node of nodesByContainer.get(containerId) ?? []) {
             const nodeType = node['type'] ?? '';
             const fieldDef = CODE_NODE_FIELDS[nodeType];
             if (!fieldDef)
@@ -452,23 +463,23 @@ async function extractFlowCode(record, flowDir) {
                 continue;
             const nodeId = node['id'] ?? 'unknown';
             const stem = `${safeFilename(displayName(node)) || 'unnamed'}_${nodeId}`;
-            await fsp.mkdir(tabDir, { recursive: true });
-            const outPath = path.join(tabDir, `${stem}${ext}`);
+            await fsp.mkdir(containerDir, { recursive: true });
+            const outPath = path.join(containerDir, `${stem}${ext}`);
             await fsp.writeFile(outPath, code, 'utf-8');
-            writtenInTab.add(outPath);
+            writtenInContainer.add(outPath);
             const rel = path.relative(flowDir, outPath);
             extracted.push({
-                tab: tabNode['label'] ?? tabId,
+                container: containerLabel(container) || containerId,
                 node: displayName(node),
                 relPath: rel,
             });
         }
         // Remove files from previous syncs that are no longer current.
-        if (fs.existsSync(tabDir)) {
-            const existing = await fsp.readdir(tabDir);
+        if (fs.existsSync(containerDir)) {
+            const existing = await fsp.readdir(containerDir);
             for (const file of existing) {
-                const fp = path.join(tabDir, file);
-                if (!writtenInTab.has(fp) && fs.statSync(fp).isFile()) {
+                const fp = path.join(containerDir, file);
+                if (!writtenInContainer.has(fp) && fs.statSync(fp).isFile()) {
                     await fsp.unlink(fp);
                 }
             }
@@ -481,23 +492,25 @@ async function generateFlowSummary(record, summaryPath, extracted) {
     const nodeRedData = record['node_red_data'];
     const flowsList = nodeRedData?.['flows'] ?? [];
     const nodeMap = buildNodeMap(flowsList);
-    const tabs = new Map();
+    const containers = new Map();
     for (const n of flowsList) {
-        if (n['type'] === 'tab') {
+        const t = n['type'];
+        if (t === 'tab' || t === 'subflow') {
             const id = n['id'];
             if (typeof id === 'string')
-                tabs.set(id, n);
+                containers.set(id, { node: n, kind: t });
         }
     }
-    const nodesByTab = new Map();
+    const nodesByContainer = new Map();
     for (const node of flowsList) {
-        if (node['type'] === 'tab')
+        const t = node['type'];
+        if (t === 'tab' || t === 'subflow')
             continue;
         const z = node['z'];
-        if (typeof z === 'string' && tabs.has(z)) {
-            const list = nodesByTab.get(z) ?? [];
+        if (typeof z === 'string' && containers.has(z)) {
+            const list = nodesByContainer.get(z) ?? [];
             list.push(node);
-            nodesByTab.set(z, list);
+            nodesByContainer.set(z, list);
         }
     }
     const lines = [];
@@ -509,14 +522,15 @@ async function generateFlowSummary(record, summaryPath, extracted) {
     const desc = record['description'];
     if (desc)
         lines.push('', desc);
-    lines.push('', '---', '', '## Tabs', '');
-    for (const [tabId, tabNode] of tabs) {
-        const tabNodes = nodesByTab.get(tabId) ?? [];
-        const tabNodeMap = buildNodeMap(tabNodes);
-        const tabLabel = tabNode['label'] ?? tabId;
-        const disabled = tabNode['disabled'] ? ' *(disabled)*' : '';
-        lines.push(`### ${tabLabel}${disabled} — ${tabNodes.length} nodes`, '');
-        const sorted = [...tabNodes].sort((a, b) => {
+    lines.push('', '---', '', '## Tabs & Subflows', '');
+    for (const [containerId, container] of containers) {
+        const containerNodes = nodesByContainer.get(containerId) ?? [];
+        const containerNodeMap = buildNodeMap(containerNodes);
+        const label = containerLabel(container) || containerId;
+        const kindTag = container.kind === 'subflow' ? ' *[subflow]*' : '';
+        const disabled = container.node['disabled'] ? ' *(disabled)*' : '';
+        lines.push(`### ${label}${kindTag}${disabled} — ${containerNodes.length} nodes`, '');
+        const sorted = [...containerNodes].sort((a, b) => {
             const ay = a['y'] ?? 0;
             const by_ = b['y'] ?? 0;
             if (ay !== by_)
@@ -532,7 +546,7 @@ async function generateFlowSummary(record, summaryPath, extracted) {
             const wires = node['wires'] ?? [];
             for (const port of wires) {
                 for (const tid of port) {
-                    const target = tabNodeMap.get(tid) ?? nodeMap.get(tid);
+                    const target = containerNodeMap.get(tid) ?? nodeMap.get(tid);
                     if (target)
                         wireNames.push(displayName(target));
                 }
@@ -544,14 +558,14 @@ async function generateFlowSummary(record, summaryPath, extracted) {
     }
     if (extracted.length > 0) {
         lines.push('---', '', '## Extracted Code Files', '');
-        const byTab = new Map();
+        const byContainer = new Map();
         for (const e of extracted) {
-            const list = byTab.get(e.tab) ?? [];
+            const list = byContainer.get(e.container) ?? [];
             list.push(e);
-            byTab.set(e.tab, list);
+            byContainer.set(e.container, list);
         }
-        for (const [tabLabel, items] of byTab) {
-            lines.push(`**${tabLabel}**`);
+        for (const [label, items] of byContainer) {
+            lines.push(`**${label}**`);
             for (const e of items) {
                 lines.push(`- \`${e.relPath}\` — ${e.node}`);
             }
