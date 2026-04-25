@@ -439,6 +439,8 @@ async function extractFlowCode(record, flowDir) {
     for (const [tabId, tabNode] of tabs) {
         const tabLabel = safeFilename(tabNode['label'] ?? tabId);
         const tabDir = path.join(flowDir, tabLabel);
+        const writtenInTab = new Set();
+        const stemCounts = new Map();
         for (const node of nodesByTab.get(tabId) ?? []) {
             const nodeType = node['type'] ?? '';
             const fieldDef = CODE_NODE_FIELDS[nodeType];
@@ -449,16 +451,30 @@ async function extractFlowCode(record, flowDir) {
             const code = (node[fieldName] ?? '').trim();
             if (!code)
                 continue;
-            const stem = safeFilename(displayName(node));
+            const baseStem = safeFilename(displayName(node)) || 'unnamed';
+            const count = stemCounts.get(baseStem) ?? 0;
+            stemCounts.set(baseStem, count + 1);
+            const stem = count === 0 ? baseStem : `${baseStem}_${count + 1}`;
             await fsp.mkdir(tabDir, { recursive: true });
-            const outPath = uniqueFilename(tabDir, stem, ext);
+            const outPath = path.join(tabDir, `${stem}${ext}`);
             await fsp.writeFile(outPath, code, 'utf-8');
+            writtenInTab.add(outPath);
             const rel = path.relative(flowDir, outPath);
             extracted.push({
                 tab: tabNode['label'] ?? tabId,
                 node: displayName(node),
                 relPath: rel,
             });
+        }
+        // Remove files from previous syncs that are no longer current.
+        if (fs.existsSync(tabDir)) {
+            const existing = await fsp.readdir(tabDir);
+            for (const file of existing) {
+                const fp = path.join(tabDir, file);
+                if (!writtenInTab.has(fp) && fs.statSync(fp).isFile()) {
+                    await fsp.unlink(fp);
+                }
+            }
         }
     }
     return extracted;
