@@ -447,9 +447,11 @@ async function extractFlowCode(record, flowDir) {
         }
     }
     const extracted = [];
+    const writtenContainerDirs = new Set();
     for (const [containerId, container] of containers) {
         const dirName = containerDirName(container, containerId);
         const containerDir = path.join(flowDir, dirName);
+        writtenContainerDirs.add(containerDir);
         const writtenInContainer = new Set();
         for (const node of nodesByContainer.get(containerId) ?? []) {
             const nodeType = node['type'] ?? '';
@@ -482,6 +484,16 @@ async function extractFlowCode(record, flowDir) {
                 if (!writtenInContainer.has(fp) && fs.statSync(fp).isFile()) {
                     await fsp.unlink(fp);
                 }
+            }
+        }
+    }
+    // Remove stale container directories (e.g. old unprefixed dirs after a rename).
+    if (fs.existsSync(flowDir)) {
+        const entries = await fsp.readdir(flowDir);
+        for (const entry of entries) {
+            const entryPath = path.join(flowDir, entry);
+            if (fs.statSync(entryPath).isDirectory() && !writtenContainerDirs.has(entryPath)) {
+                await fsp.rm(entryPath, { recursive: true, force: true });
             }
         }
     }
