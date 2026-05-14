@@ -59,7 +59,7 @@ jobs:
         with:
           name: object-type-examples
           path: ${{ inputs.out }}/components/object-types/
-          retention-days: 7
+          retention-days: 1
           if-no-files-found: ignore
 
       - name: Commit snapshot if changed
